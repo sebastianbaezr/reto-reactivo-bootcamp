@@ -24,7 +24,7 @@ buildCache {
     }
 }
 
-rootProject.name = 'RetoReactivo'
+rootProject.name = 'RetoReactivoTecnologia'
 
 include ':app-service'
 include ':model'
