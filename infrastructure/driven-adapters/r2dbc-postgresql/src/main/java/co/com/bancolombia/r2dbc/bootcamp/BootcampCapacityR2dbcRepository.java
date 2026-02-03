@@ -11,6 +11,9 @@ public interface BootcampCapacityR2dbcRepository extends ReactiveCrudRepository<
     @Query("SELECT capacity_id FROM bootcamp_capacities WHERE bootcamp_id = :bootcampId")
     Flux<Long> findCapacityIdsByBootcampId(@Param("bootcampId") Long bootcampId);
 
+    @Query("SELECT id, bootcamp_id, capacity_id FROM bootcamp_capacities WHERE bootcamp_id = :bootcampId")
+    Flux<BootcampCapacityData> findCapacitiesByBootcampId(@Param("bootcampId") Long bootcampId);
+
     @Query("DELETE FROM bootcamp_capacities WHERE bootcamp_id = :bootcampId")
     Mono<Void> deleteByBootcampId(@Param("bootcampId") Long bootcampId);
 }

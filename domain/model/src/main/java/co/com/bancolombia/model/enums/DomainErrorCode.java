@@ -30,7 +30,12 @@ public enum DomainErrorCode {
 
     // Capacity service errors
     CAPACITY_SERVICE_UNAVAILABLE("CAPACITY_SERVICE_UNAVAILABLE", "El servicio de capacidades no está disponible"),
-    CAPACITY_SERVICE_ERROR("CAPACITY_SERVICE_ERROR", "Error al comunicarse con el servicio de capacidades");
+    CAPACITY_SERVICE_ERROR("CAPACITY_SERVICE_ERROR", "Error al comunicarse con el servicio de capacidades"),
+
+    // Pagination errors
+    INVALID_PAGE_NUMBER("INVALID_PAGE_NUMBER", "El número de página no puede ser negativo"),
+    INVALID_PAGE_SIZE("INVALID_PAGE_SIZE", "El tamaño de página debe estar entre 1 y 50"),
+    INVALID_SORT_FIELD("INVALID_SORT_FIELD", "El campo de ordenamiento no es válido");
 
     private final String code;
     private final String message;

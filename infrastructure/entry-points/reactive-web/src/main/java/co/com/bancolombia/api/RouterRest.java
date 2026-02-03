@@ -22,7 +22,9 @@ public class RouterRest {
             .andRoute(POST("/api/usecase/otherpath"), handler::listenPOSTUseCase);
 
         if (bootcampHandler.isPresent()) {
-            router = router.andRoute(POST("/api/bootcamps"), bootcampHandler.get()::registerBootcamp);
+            router = router
+                .andRoute(POST("/api/bootcamps"), bootcampHandler.get()::registerBootcamp)
+                .andRoute(GET("/api/bootcamps"), bootcampHandler.get()::listBootcamps);
         }
 
         return router;
