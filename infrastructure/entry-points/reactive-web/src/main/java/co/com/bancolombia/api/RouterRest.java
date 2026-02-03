@@ -20,7 +20,9 @@ public class RouterRest {
             .andRoute(POST("/api/usecase/otherpath"), handler::listenPOSTUseCase);
 
         if (technologyHandler.isPresent()) {
-            router = router.andRoute(POST("/api/technologies"), technologyHandler.get()::registerTechnology);
+            router = router.andRoute(GET("/api/technologies"), technologyHandler.get()::getTechnologiesByIds)
+                .andRoute(POST("/api/technologies"), technologyHandler.get()::registerTechnology)
+                .andRoute(GET("/api/technologies/validate"), technologyHandler.get()::validateTechnologies);
         }
 
         return router;
