@@ -15,4 +15,6 @@ public abstract class AuditableModelData {
 
     @LastModifiedDate
     private LocalDateTime updatedAt;
+
+    private LocalDateTime deletedAt;
 }

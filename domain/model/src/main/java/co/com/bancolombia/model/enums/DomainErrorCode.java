@@ -35,7 +35,16 @@ public enum DomainErrorCode {
     // Pagination errors
     INVALID_PAGE_NUMBER("INVALID_PAGE_NUMBER", "El número de página no puede ser negativo"),
     INVALID_PAGE_SIZE("INVALID_PAGE_SIZE", "El tamaño de página debe estar entre 1 y 50"),
-    INVALID_SORT_FIELD("INVALID_SORT_FIELD", "El campo de ordenamiento no es válido");
+    INVALID_SORT_FIELD("INVALID_SORT_FIELD", "El campo de ordenamiento no es válido"),
+
+    // Bootcamp deletion (saga) errors
+    BOOTCAMP_NOT_FOUND("BOOTCAMP_NOT_FOUND", "El bootcamp no fue encontrado"),
+    BOOTCAMP_DELETE_FAILED("BOOTCAMP_DELETE_FAILED", "Error al eliminar el bootcamp"),
+    CAPACITY_DELETE_FAILED("CAPACITY_DELETE_FAILED", "Error al eliminar las capacidades"),
+    TECHNOLOGY_DELETE_FAILED("TECHNOLOGY_DELETE_FAILED", "Error al eliminar las tecnologías"),
+    SAGA_ROLLBACK_FAILED("SAGA_ROLLBACK_FAILED", "Error en la compensación de la saga"),
+    CAPACITY_IN_USE("CAPACITY_IN_USE", "La capacidad está siendo utilizada por otros bootcamps"),
+    TECHNOLOGY_IN_USE("TECHNOLOGY_IN_USE", "La tecnología está siendo utilizada por otras capacidades");
 
     private final String code;
     private final String message;

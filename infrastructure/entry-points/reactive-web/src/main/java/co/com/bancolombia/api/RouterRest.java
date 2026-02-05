@@ -9,6 +9,7 @@ import java.util.Optional;
 
 import static org.springframework.web.reactive.function.server.RequestPredicates.GET;
 import static org.springframework.web.reactive.function.server.RequestPredicates.POST;
+import static org.springframework.web.reactive.function.server.RequestPredicates.DELETE;
 import static org.springframework.web.reactive.function.server.RouterFunctions.route;
 
 @Configuration
@@ -24,7 +25,8 @@ public class RouterRest {
         if (bootcampHandler.isPresent()) {
             router = router
                 .andRoute(POST("/api/bootcamps"), bootcampHandler.get()::registerBootcamp)
-                .andRoute(GET("/api/bootcamps"), bootcampHandler.get()::listBootcamps);
+                .andRoute(GET("/api/bootcamps"), bootcampHandler.get()::listBootcamps)
+                .andRoute(DELETE("/api/bootcamps/{bootcampId}"), bootcampHandler.get()::deleteBootcamp);
         }
 
         return router;

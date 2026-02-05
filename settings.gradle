@@ -42,3 +42,6 @@ project(':webflux-client').projectDir = file('./infrastructure/driven-adapters/w
 
 include ':capacity-client-adapter'
 project(':capacity-client-adapter').projectDir = file('./infrastructure/driven-adapters/capacity-client-adapter')
+
+include ':technology-client-adapter'
+project(':technology-client-adapter').projectDir = file('./infrastructure/driven-adapters/technology-client-adapter')
