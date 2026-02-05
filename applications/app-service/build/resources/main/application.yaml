@@ -1,9 +1,9 @@
 server:
-  port: 8080
+  port: 8082
 
 spring:
   application:
-    name: "RetoReactivo"
+    name: "RetoReactivoBootcamp"
   devtools:
     add-properties: false
   h2:
@@ -13,7 +13,7 @@ spring:
   profiles:
     include: null
   r2dbc:
-    url: r2dbc:postgresql://database-reactiva.cyjc2g6ec3fc.us-east-1.rds.amazonaws.com:5432/reto_reactivo?sslmode=require
+    url: r2dbc:postgresql://database-reactiva.cyjc2g6ec3fc.us-east-1.rds.amazonaws.com:5432/reto_reactivo_bootcamp?sslmode=require
     username: postgres
     password: NuevaPasswordSegura123
     pool:
@@ -31,8 +31,9 @@ spring:
 
 logging:
   level:
-    org.springframework.r2dbc: DEBUG
-    io.r2dbc.postgresql: DEBUG
+    org.springframework.r2dbc: INFO
+    io.r2dbc.postgresql: INFO
+
 management:
   endpoints:
     web:
@@ -42,5 +43,17 @@ management:
     health:
       probes:
         enabled: true
+
 cors:
   allowed-origins: "http://localhost:4200,http://localhost:8080"
+
+external-services:
+  services:
+    capacity-service:
+      base-url: "http://localhost:8081"
+      connect-timeout: 3000
+      response-timeout: 5
+    technology-service:
+      base-url: "http://localhost:8080"
+      connect-timeout: 3000
+      response-timeout: 5

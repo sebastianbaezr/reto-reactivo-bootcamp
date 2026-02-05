@@ -337,6 +337,7 @@ build-cache
 
 # Application configuration with sensitive data for local development
 applications/app-service/src/main/resources/application.yaml
+applications/app-service/build/resources/main/application.yaml
 
 # Environment files with secrets
 deployment/.env
