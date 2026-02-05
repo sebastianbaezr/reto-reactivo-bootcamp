@@ -309,6 +309,14 @@ $RECYCLE.BIN/
 # Windows shortcuts
 *.lnk
 
+# Windows reserved device names
+nul
+con
+prn
+aux
+lpt*
+com*
+
 ### Gradle ###
 .gradle
 build/
