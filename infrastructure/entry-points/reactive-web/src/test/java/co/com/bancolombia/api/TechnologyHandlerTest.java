@@ -1,16 +1,23 @@
 package co.com.bancolombia.api;
 
+import co.com.bancolombia.api.dto.request.BatchOperationRequest;
 import co.com.bancolombia.api.dto.request.TechnologyRequest;
+import co.com.bancolombia.api.dto.response.RestoreTechnologiesResponse;
+import co.com.bancolombia.api.dto.response.SoftDeleteTechnologiesResponse;
 import co.com.bancolombia.api.dto.response.TechnologyResponse;
 import co.com.bancolombia.api.dto.response.TechnologySimpleResponse;
 import co.com.bancolombia.api.dto.response.ValidateTechnologiesResponse;
 import co.com.bancolombia.api.mapper.TechnologyMapper;
 import co.com.bancolombia.model.enums.DomainErrorCode;
 import co.com.bancolombia.model.exception.BusinessException;
+import co.com.bancolombia.model.result.RestoreTechnologiesResult;
+import co.com.bancolombia.model.result.SoftDeleteTechnologiesResult;
+import co.com.bancolombia.model.result.ValidateTechnologiesResult;
 import co.com.bancolombia.model.technology.Technology;
 import co.com.bancolombia.usecase.gettechnologiesbyids.GetTechnologiesByIdsUseCase;
 import co.com.bancolombia.usecase.registertechnology.RegisterTechnologyUseCase;
-import co.com.bancolombia.usecase.validatetechnologies.ValidateTechnologiesResult;
+import co.com.bancolombia.usecase.restoretechnologies.RestoreTechnologiesUseCase;
+import co.com.bancolombia.usecase.softdeletetechnologies.SoftDeleteTechnologiesUseCase;
 import co.com.bancolombia.usecase.validatetechnologies.ValidateTechnologiesUseCase;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -47,6 +54,12 @@ class TechnologyHandlerTest {
     private GetTechnologiesByIdsUseCase getTechnologiesByIdsUseCase;
 
     @Mock
+    private SoftDeleteTechnologiesUseCase softDeleteTechnologiesUseCase;
+
+    @Mock
+    private RestoreTechnologiesUseCase restoreTechnologiesUseCase;
+
+    @Mock
     private TechnologyMapper technologyMapper;
 
     @Mock
@@ -68,7 +81,7 @@ class TechnologyHandlerTest {
 
         when(serverRequest.bodyToMono(TechnologyRequest.class))
             .thenReturn(Mono.just(request));
-        when(technologyMapper.toEntity(request))
+        when(technologyMapper.toDomain(request))
             .thenReturn(technology);
         when(registerTechnologyUseCase.execute(technology))
             .thenReturn(Mono.just(savedTechnology));
@@ -92,7 +105,7 @@ class TechnologyHandlerTest {
 
         when(serverRequest.bodyToMono(TechnologyRequest.class))
             .thenReturn(Mono.just(request));
-        when(technologyMapper.toEntity(request))
+        when(technologyMapper.toDomain(request))
             .thenReturn(technology);
         when(registerTechnologyUseCase.execute(technology))
             .thenReturn(Mono.error(new BusinessException(DomainErrorCode.TECHNOLOGY_NAME_ALREADY_EXISTS)));
@@ -112,7 +125,7 @@ class TechnologyHandlerTest {
 
         when(serverRequest.bodyToMono(TechnologyRequest.class))
             .thenReturn(Mono.just(request));
-        when(technologyMapper.toEntity(request))
+        when(technologyMapper.toDomain(request))
             .thenReturn(technology);
         when(registerTechnologyUseCase.execute(technology))
             .thenReturn(Mono.error(new BusinessException(DomainErrorCode.NAME_REQUIRED)));
@@ -134,7 +147,7 @@ class TechnologyHandlerTest {
 
         when(serverRequest.bodyToMono(TechnologyRequest.class))
             .thenReturn(Mono.just(request));
-        when(technologyMapper.toEntity(request))
+        when(technologyMapper.toDomain(request))
             .thenReturn(technology);
         when(registerTechnologyUseCase.execute(technology))
             .thenReturn(Mono.error(new BusinessException(DomainErrorCode.INVALID_NAME_LENGTH)));
@@ -154,7 +167,7 @@ class TechnologyHandlerTest {
 
         when(serverRequest.bodyToMono(TechnologyRequest.class))
             .thenReturn(Mono.just(request));
-        when(technologyMapper.toEntity(request))
+        when(technologyMapper.toDomain(request))
             .thenReturn(technology);
         when(registerTechnologyUseCase.execute(technology))
             .thenReturn(Mono.error(new BusinessException(DomainErrorCode.DESCRIPTION_REQUIRED)));
@@ -176,7 +189,7 @@ class TechnologyHandlerTest {
 
         when(serverRequest.bodyToMono(TechnologyRequest.class))
             .thenReturn(Mono.just(request));
-        when(technologyMapper.toEntity(request))
+        when(technologyMapper.toDomain(request))
             .thenReturn(technology);
         when(registerTechnologyUseCase.execute(technology))
             .thenReturn(Mono.error(new BusinessException(DomainErrorCode.INVALID_DESCRIPTION_LENGTH)));
@@ -200,7 +213,7 @@ class TechnologyHandlerTest {
 
         when(serverRequest.bodyToMono(TechnologyRequest.class))
             .thenReturn(Mono.just(request));
-        when(technologyMapper.toEntity(request))
+        when(technologyMapper.toDomain(request))
             .thenReturn(technology);
         when(registerTechnologyUseCase.execute(technology))
             .thenReturn(Mono.just(savedTechnology));
@@ -226,7 +239,7 @@ class TechnologyHandlerTest {
 
         when(serverRequest.bodyToMono(TechnologyRequest.class))
             .thenReturn(Mono.just(request));
-        when(technologyMapper.toEntity(request))
+        when(technologyMapper.toDomain(request))
             .thenReturn(technology);
         when(registerTechnologyUseCase.execute(technology))
             .thenReturn(Mono.just(savedTechnology));
@@ -250,7 +263,7 @@ class TechnologyHandlerTest {
 
         when(serverRequest.bodyToMono(TechnologyRequest.class))
             .thenReturn(Mono.just(request));
-        when(technologyMapper.toEntity(request))
+        when(technologyMapper.toDomain(request))
             .thenReturn(technology);
         when(registerTechnologyUseCase.execute(technology))
             .thenReturn(Mono.error(new RuntimeException("Database connection failed")));
@@ -482,6 +495,128 @@ class TechnologyHandlerTest {
         StepVerifier.create(technologyHandler.getTechnologiesByIds(serverRequest))
             .expectNextMatches(serverResponse -> serverResponse.statusCode().value() == 200)
             .verifyComplete();
+    }
+
+    @Test
+    @DisplayName("Should soft delete technologies successfully")
+    void testSoftDeleteTechnologies_Success() {
+        // Arrange
+        List<Long> ids = List.of(1L, 2L, 3L);
+        BatchOperationRequest request = new BatchOperationRequest(ids);
+        SoftDeleteTechnologiesResult result = new SoftDeleteTechnologiesResult(3, ids);
+        SoftDeleteTechnologiesResponse response = SoftDeleteTechnologiesResponse.builder()
+            .deletedCount(3)
+            .deletedIds(ids)
+            .message("Tecnologías eliminadas exitosamente")
+            .build();
+
+        when(serverRequest.bodyToMono(BatchOperationRequest.class))
+            .thenReturn(Mono.just(request));
+        when(softDeleteTechnologiesUseCase.execute(ids))
+            .thenReturn(Mono.just(result));
+        when(technologyMapper.toSoftDeleteResponse(result))
+            .thenReturn(response);
+
+        // Act & Assert
+        StepVerifier.create(technologyHandler.softDeleteTechnologies(serverRequest))
+            .expectNextMatches(serverResponse -> serverResponse.statusCode().value() == 200)
+            .verifyComplete();
+    }
+
+    @Test
+    @DisplayName("Should return 400 when soft delete with empty ids list")
+    void testSoftDeleteTechnologies_EmptyIdsList() {
+        // Arrange
+        BatchOperationRequest request = new BatchOperationRequest(List.of());
+
+        when(serverRequest.bodyToMono(BatchOperationRequest.class))
+            .thenReturn(Mono.just(request));
+        when(softDeleteTechnologiesUseCase.execute(List.of()))
+            .thenReturn(Mono.error(new BusinessException(DomainErrorCode.EMPTY_IDS_LIST)));
+
+        // Act & Assert
+        StepVerifier.create(technologyHandler.softDeleteTechnologies(serverRequest))
+            .expectError(BusinessException.class)
+            .verify();
+    }
+
+    @Test
+    @DisplayName("Should return 404 when soft delete with non-existent technology")
+    void testSoftDeleteTechnologies_NotFound() {
+        // Arrange
+        List<Long> ids = List.of(999L);
+        BatchOperationRequest request = new BatchOperationRequest(ids);
+
+        when(serverRequest.bodyToMono(BatchOperationRequest.class))
+            .thenReturn(Mono.just(request));
+        when(softDeleteTechnologiesUseCase.execute(ids))
+            .thenReturn(Mono.error(new BusinessException(DomainErrorCode.TECHNOLOGY_NOT_FOUND)));
+
+        // Act & Assert
+        StepVerifier.create(technologyHandler.softDeleteTechnologies(serverRequest))
+            .expectError(BusinessException.class)
+            .verify();
+    }
+
+    @Test
+    @DisplayName("Should restore technologies successfully")
+    void testRestoreTechnologies_Success() {
+        // Arrange
+        List<Long> ids = List.of(1L, 2L);
+        BatchOperationRequest request = new BatchOperationRequest(ids);
+        RestoreTechnologiesResult result = new RestoreTechnologiesResult(2, ids);
+        RestoreTechnologiesResponse response = RestoreTechnologiesResponse.builder()
+            .restoredCount(2)
+            .restoredIds(ids)
+            .message("Tecnologías restauradas exitosamente")
+            .build();
+
+        when(serverRequest.bodyToMono(BatchOperationRequest.class))
+            .thenReturn(Mono.just(request));
+        when(restoreTechnologiesUseCase.execute(ids))
+            .thenReturn(Mono.just(result));
+        when(technologyMapper.toRestoreResponse(result))
+            .thenReturn(response);
+
+        // Act & Assert
+        StepVerifier.create(technologyHandler.restoreTechnologies(serverRequest))
+            .expectNextMatches(serverResponse -> serverResponse.statusCode().value() == 200)
+            .verifyComplete();
+    }
+
+    @Test
+    @DisplayName("Should return 400 when restore with empty ids list")
+    void testRestoreTechnologies_EmptyIdsList() {
+        // Arrange
+        BatchOperationRequest request = new BatchOperationRequest(List.of());
+
+        when(serverRequest.bodyToMono(BatchOperationRequest.class))
+            .thenReturn(Mono.just(request));
+        when(restoreTechnologiesUseCase.execute(List.of()))
+            .thenReturn(Mono.error(new BusinessException(DomainErrorCode.EMPTY_IDS_LIST)));
+
+        // Act & Assert
+        StepVerifier.create(technologyHandler.restoreTechnologies(serverRequest))
+            .expectError(BusinessException.class)
+            .verify();
+    }
+
+    @Test
+    @DisplayName("Should return 404 when restore non-deleted technology")
+    void testRestoreTechnologies_NotDeleted() {
+        // Arrange
+        List<Long> ids = List.of(999L);
+        BatchOperationRequest request = new BatchOperationRequest(ids);
+
+        when(serverRequest.bodyToMono(BatchOperationRequest.class))
+            .thenReturn(Mono.just(request));
+        when(restoreTechnologiesUseCase.execute(ids))
+            .thenReturn(Mono.error(new BusinessException(DomainErrorCode.TECHNOLOGY_NOT_DELETED)));
+
+        // Act & Assert
+        StepVerifier.create(technologyHandler.restoreTechnologies(serverRequest))
+            .expectError(BusinessException.class)
+            .verify();
     }
 
     // Helper methods

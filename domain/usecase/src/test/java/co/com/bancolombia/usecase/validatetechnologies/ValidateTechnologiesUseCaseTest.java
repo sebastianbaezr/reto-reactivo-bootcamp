@@ -1,5 +1,6 @@
 package co.com.bancolombia.usecase.validatetechnologies;
 
+import co.com.bancolombia.model.result.ValidateTechnologiesResult;
 import co.com.bancolombia.model.technology.gateways.TechnologyRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;

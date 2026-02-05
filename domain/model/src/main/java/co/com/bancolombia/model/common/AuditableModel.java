@@ -11,4 +11,6 @@ public abstract class AuditableModel {
     protected LocalDateTime createdAt;
 
     protected LocalDateTime updatedAt;
+
+    protected LocalDateTime deletedAt;
 }

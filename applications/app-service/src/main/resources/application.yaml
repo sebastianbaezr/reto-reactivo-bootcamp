@@ -31,8 +31,8 @@ spring:
 
 logging:
   level:
-    org.springframework.r2dbc: DEBUG
-    io.r2dbc.postgresql: DEBUG
+    org.springframework.r2dbc: INFO
+    io.r2dbc.postgresql: INFO
 management:
   endpoints:
     web:

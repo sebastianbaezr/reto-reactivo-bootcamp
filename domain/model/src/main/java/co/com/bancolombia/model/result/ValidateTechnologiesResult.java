@@ -1,4 +1,4 @@
-package co.com.bancolombia.usecase.validatetechnologies;
+package co.com.bancolombia.model.result;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;

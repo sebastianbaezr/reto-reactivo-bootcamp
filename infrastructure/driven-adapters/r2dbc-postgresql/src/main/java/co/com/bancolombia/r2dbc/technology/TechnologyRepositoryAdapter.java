@@ -33,4 +33,26 @@ public class TechnologyRepositoryAdapter extends ReactiveAdapterOperations<Techn
         return repository.findByIds(ids.toArray(new Long[0]))
                 .map(data -> mapper.map(data, Technology.class));
     }
+
+    @Override
+    public Mono<Integer> softDeleteByIds(List<Long> ids) {
+        return repository.softDeleteByIds(ids.toArray(new Long[0]));
+    }
+
+    @Override
+    public Mono<Integer> restoreByIds(List<Long> ids) {
+        return repository.restoreByIds(ids.toArray(new Long[0]));
+    }
+
+    @Override
+    public Flux<Technology> findActiveByIds(List<Long> ids) {
+        return repository.findActiveByIds(ids.toArray(new Long[0]))
+                .map(data -> mapper.map(data, Technology.class));
+    }
+
+    @Override
+    public Flux<Technology> findDeletedByIds(List<Long> ids) {
+        return repository.findDeletedByIds(ids.toArray(new Long[0]))
+                .map(data -> mapper.map(data, Technology.class));
+    }
 }

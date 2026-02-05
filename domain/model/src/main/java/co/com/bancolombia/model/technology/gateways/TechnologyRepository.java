@@ -18,4 +18,12 @@ public interface TechnologyRepository {
     Flux<Long> findExistingIdsByIds(List<Long> ids);
 
     Flux<Technology> findByIds(List<Long> ids);
+
+    Mono<Integer> softDeleteByIds(List<Long> ids);
+
+    Mono<Integer> restoreByIds(List<Long> ids);
+
+    Flux<Technology> findActiveByIds(List<Long> ids);
+
+    Flux<Technology> findDeletedByIds(List<Long> ids);
 }
