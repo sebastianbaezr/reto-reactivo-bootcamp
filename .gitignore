@@ -342,3 +342,4 @@ applications/app-service/src/main/resources/application.yaml
 deployment/.env
 
 .claude
+ nul
