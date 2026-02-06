@@ -57,3 +57,7 @@ external-services:
       base-url: "http://localhost:8080"
       connect-timeout: 3000
       response-timeout: 5
+    bootcamp-report-service:
+      base-url: "http://localhost:8084"
+      connect-timeout: 3000
+      response-timeout: 5

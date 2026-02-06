@@ -1,6 +1,7 @@
 package co.com.bancolombia.adapter.capacity;
 
 import co.com.bancolombia.adapter.capacity.dto.CapacityValidationResponse;
+import co.com.bancolombia.adapter.capacity.dto.TechnologyCountsResponse;
 import co.com.bancolombia.model.capacity.gateways.CapacityValidationGateway;
 import co.com.bancolombia.model.enums.DomainErrorCode;
 import co.com.bancolombia.model.exception.BusinessException;
@@ -13,6 +14,7 @@ import reactor.core.publisher.Mono;
 
 import java.time.Duration;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Repository
@@ -86,5 +88,52 @@ public class CapacityValidationAdapter implements CapacityValidationGateway {
             return Mono.error(new BusinessException(DomainErrorCode.CAPACITY_SERVICE_UNAVAILABLE));
         }
         return Mono.error(error);
+    }
+
+    /**
+     * Obtiene el conteo de tecnologías por capacidad desde el servicio de capacidades.
+     * @param capacityIds lista de IDs de capacidades
+     * @return Map con capacityId -> technologyCount
+     */
+    public Mono<Map<String, Long>> getTechnologyCountsByCapacityIds(List<Long> capacityIds) {
+        if (capacityIds == null || capacityIds.isEmpty()) {
+            log.warn("No capacity IDs provided for technology counts");
+            return Mono.just(Map.of());
+        }
+
+        String idsParam = capacityIds.stream()
+            .map(String::valueOf)
+            .collect(Collectors.joining(","));
+
+        log.info("Fetching technology counts for capacity IDs: {}", idsParam);
+
+        return webClient
+            .get()
+            .uri(uriBuilder -> uriBuilder
+                .path("/api/capacities/technology-counts")
+                .queryParam("ids", idsParam)
+                .build())
+            .retrieve()
+            .onStatus(status -> status.is4xxClientError() || status.is5xxServerError(), response -> {
+                log.error("Error fetching technology counts. Status: {}", response.statusCode());
+                return response.bodyToMono(String.class)
+                    .doOnNext(body -> log.error("Error response body: {}", body))
+                    .then(Mono.error(new BusinessException(
+                        response.statusCode().is5xxServerError()
+                            ? DomainErrorCode.CAPACITY_SERVICE_UNAVAILABLE
+                            : DomainErrorCode.CAPACITY_SERVICE_ERROR
+                    )));
+            })
+            .bodyToMono(TechnologyCountsResponse.class)
+            .map(TechnologyCountsResponse::getCapacityTechnologyCounts)
+            .doOnSuccess(counts -> log.info("Technology counts retrieved: {}", counts))
+            .doOnError(error -> log.error("Error getting technology counts: {}", error.getMessage(), error))
+            .onErrorResume(error -> {
+                if (error instanceof WebClientRequestException) {
+                    log.error("Connection error to capacity service", error);
+                    return Mono.just(Map.of());
+                }
+                return Mono.just(Map.of());
+            });
     }
 }

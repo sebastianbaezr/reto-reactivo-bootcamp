@@ -45,3 +45,6 @@ project(':capacity-client-adapter').projectDir = file('./infrastructure/driven-a
 
 include ':technology-client-adapter'
 project(':technology-client-adapter').projectDir = file('./infrastructure/driven-adapters/technology-client-adapter')
+
+include ':bootcamp-report-client-adapter'
+project(':bootcamp-report-client-adapter').projectDir = file('./infrastructure/driven-adapters/bootcamp-report-client-adapter')
