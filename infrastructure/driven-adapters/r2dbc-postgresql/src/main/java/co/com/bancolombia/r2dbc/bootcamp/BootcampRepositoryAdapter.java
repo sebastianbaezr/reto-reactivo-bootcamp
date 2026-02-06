@@ -66,20 +66,23 @@ public class BootcampRepositoryAdapter extends ReactiveAdapterOperations<Bootcam
         log.debug("Finding bootcamp by id: {}", id);
 
         return repository.findById(id)
-            .flatMap(bootcampData ->
-                bootcampCapacityRepository.findCapacityIdsByBootcampId(id)
+            .flatMap(bootcampData -> {
+                System.out.println("BootcampData found: " + bootcampData.getId());
+                return bootcampCapacityRepository.findCapacityIdsByBootcampId(id)
                     .collectList()
+                    .doOnNext(capacityIds -> System.out.println("Capacity IDs from DB: " + capacityIds))
                     .map(capacityIds -> {
                         bootcampData.setCapacityIds(capacityIds);
                         return bootcampData;
-                    })
-            )
-            .map(this::toEntity)
-            .map(bootcamp -> {
-                List<Capacity> capacities = bootcamp.getCapacities() != null
-                    ? bootcamp.getCapacities()
-                    : List.of();
+                    });
+            })
+            .map(bootcampData -> {
+                Bootcamp bootcamp = toEntity(bootcampData);
+                List<Capacity> capacities = bootcampData.getCapacityIds().stream()
+                    .map(capId -> Capacity.builder().id(capId).build())
+                    .toList();
                 bootcamp.setCapacities(capacities);
+                System.out.println("Bootcamp entity capacities after mapping: " + capacities.size());
                 return bootcamp;
             });
     }

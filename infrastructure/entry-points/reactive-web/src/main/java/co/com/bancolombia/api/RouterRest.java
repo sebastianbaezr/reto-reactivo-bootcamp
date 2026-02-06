@@ -26,6 +26,7 @@ public class RouterRest {
             router = router
                 .andRoute(POST("/api/bootcamps"), bootcampHandler.get()::registerBootcamp)
                 .andRoute(GET("/api/bootcamps"), bootcampHandler.get()::listBootcamps)
+                .andRoute(GET("/api/bootcamps/{bootcampId}"), bootcampHandler.get()::getBootcampDetail)
                 .andRoute(DELETE("/api/bootcamps/{bootcampId}"), bootcampHandler.get()::deleteBootcamp)
                 .andRoute(POST("/api/bootcamps/validate"), bootcampHandler.get()::validateBootcamps);
         }

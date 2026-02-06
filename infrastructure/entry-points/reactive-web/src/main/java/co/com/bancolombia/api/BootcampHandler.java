@@ -15,6 +15,7 @@ import co.com.bancolombia.usecase.registerbootcamp.RegisterBootcampUseCase;
 import co.com.bancolombia.usecase.listbootcamp.ListBootcampsUseCase;
 import co.com.bancolombia.usecase.deletebootcamp.DeleteBootcampUseCase;
 import co.com.bancolombia.usecase.validatebootcamps.ValidateBootcampsUseCase;
+import co.com.bancolombia.usecase.getbootcampdetail.GetBootcampDetailUseCase;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -33,6 +34,7 @@ public class BootcampHandler {
     private final ListBootcampsUseCase listBootcampsUseCase;
     private final DeleteBootcampUseCase deleteBootcampUseCase;
     private final ValidateBootcampsUseCase validateBootcampsUseCase;
+    private final GetBootcampDetailUseCase getBootcampDetailUseCase;
     private final BootcampMapper bootcampMapper;
     private final BootcampListMapper bootcampListMapper;
 
@@ -76,6 +78,14 @@ public class BootcampHandler {
             .flatMap(response -> ServerResponse.ok().bodyValue(response))
             .doOnSuccess(v -> log.info("Bootcamps validated successfully"))
             .doOnError(error -> log.error("Error validating bootcamps", error));
+    }
+
+    public Mono<ServerResponse> getBootcampDetail(ServerRequest request) {
+        return Mono.fromCallable(() -> Long.parseLong(request.pathVariable(BOOTCAMP_ID_PATH_VARIABLE)))
+            .flatMap(getBootcampDetailUseCase::execute)
+            .flatMap(response -> ServerResponse.ok().bodyValue(response))
+            .doOnSuccess(v -> log.info("Bootcamp detail retrieved successfully"))
+            .doOnError(error -> log.error("Error retrieving bootcamp detail", error));
     }
 
     private BootcampDeleteResponse buildDeleteResponse(DeleteBootcampSaga saga) {

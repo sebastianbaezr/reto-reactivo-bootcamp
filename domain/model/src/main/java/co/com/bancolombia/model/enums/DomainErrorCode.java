@@ -32,6 +32,10 @@ public enum DomainErrorCode {
     CAPACITY_SERVICE_UNAVAILABLE("CAPACITY_SERVICE_UNAVAILABLE", "El servicio de capacidades no está disponible"),
     CAPACITY_SERVICE_ERROR("CAPACITY_SERVICE_ERROR", "Error al comunicarse con el servicio de capacidades"),
 
+    // Person service errors
+    PERSON_SERVICE_UNAVAILABLE("PERSON_SERVICE_UNAVAILABLE", "El servicio de personas no está disponible"),
+    PERSON_SERVICE_ERROR("PERSON_SERVICE_ERROR", "Error al comunicarse con el servicio de personas"),
+
     // Pagination errors
     INVALID_PAGE_NUMBER("INVALID_PAGE_NUMBER", "El número de página no puede ser negativo"),
     INVALID_PAGE_SIZE("INVALID_PAGE_SIZE", "El tamaño de página debe estar entre 1 y 50"),

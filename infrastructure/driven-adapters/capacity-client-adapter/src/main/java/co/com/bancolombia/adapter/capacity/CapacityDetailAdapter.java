@@ -41,6 +41,7 @@ public class CapacityDetailAdapter implements CapacityDetailGateway {
             .collect(Collectors.joining(","));
 
         log.info("Fetching capacity details for IDs: {}", idsParam);
+        System.out.println("[CapacityDetailAdapter] Calling capacity service with IDs: " + idsParam);
 
         return webClient
             .get()
@@ -61,8 +62,11 @@ public class CapacityDetailAdapter implements CapacityDetailGateway {
             })
             .bodyToFlux(CapacityDetail.class)
             .timeout(Duration.ofSeconds(TIMEOUT_SECONDS))
-            .doOnNext(capacity -> log.debug("Fetched capacity: {} with {} technologies",
-                capacity.getName(), capacity.getTechnologies().size()))
+            .doOnNext(capacity -> {
+                log.debug("Fetched capacity: {} with {} technologies",
+                    capacity.getName(), capacity.getTechnologies().size());
+                System.out.println("[CapacityDetailAdapter] Received capacity: " + capacity.getName() + " with " + capacity.getTechnologies().size() + " technologies");
+            })
             .doOnError(error -> log.error("Error fetching capacity details: {}", error.getMessage(), error))
             .onErrorResume(error -> {
                 log.error("Capacity detail fetch failed, returning empty", error);

@@ -61,3 +61,7 @@ external-services:
       base-url: "http://localhost:8084"
       connect-timeout: 3000
       response-timeout: 5
+    person-service:
+      base-url: "http://localhost:8083"
+      connect-timeout: 3000
+      response-timeout: 5
