@@ -257,6 +257,27 @@ public class BootcampRepositoryAdapter extends ReactiveAdapterOperations<Bootcam
             .build();
     }
 
+    @Override
+    public Flux<Bootcamp> findByIds(List<Long> ids) {
+        log.debug("Finding bootcamps by ids: {}", ids);
+
+        if (ids == null || ids.isEmpty()) {
+            return Flux.empty();
+        }
+
+        Long[] idsArray = ids.toArray(new Long[0]);
+        return repository.findByIds(idsArray)
+            .flatMap(bootcampData ->
+                bootcampCapacityRepository.findCapacityIdsByBootcampId(bootcampData.getId())
+                    .collectList()
+                    .map(capacityIds -> {
+                        bootcampData.setCapacityIds(capacityIds);
+                        return bootcampData;
+                    })
+            )
+            .map(this::toEntity);
+    }
+
     /**
      * Guarda las relaciones bootcamp-capacidades
      */

@@ -6,6 +6,8 @@ import co.com.bancolombia.model.common.PageRequest;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import java.util.List;
+
 public interface BootcampRepository {
     Mono<Bootcamp> save(Bootcamp bootcamp);
 
@@ -16,4 +18,6 @@ public interface BootcampRepository {
     Flux<Bootcamp> findAll();
 
     Mono<Page<Bootcamp>> findAllWithPagination(PageRequest pageRequest);
+
+    Flux<Bootcamp> findByIds(List<Long> ids);
 }

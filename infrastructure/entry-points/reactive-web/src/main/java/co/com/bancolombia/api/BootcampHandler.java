@@ -2,7 +2,9 @@ package co.com.bancolombia.api;
 
 import co.com.bancolombia.api.dto.request.BootcampRequest;
 import co.com.bancolombia.api.dto.request.ListBootcampsRequest;
+import co.com.bancolombia.api.dto.request.ValidateBootcampsRequest;
 import co.com.bancolombia.api.dto.response.BootcampDeleteResponse;
+import co.com.bancolombia.api.dto.response.ValidateBootcampsResponse;
 import co.com.bancolombia.api.helper.BootcampHandlerHelper;
 import co.com.bancolombia.api.mapper.BootcampMapper;
 import co.com.bancolombia.api.mapper.BootcampListMapper;
@@ -12,6 +14,7 @@ import co.com.bancolombia.model.capacity.Capacity;
 import co.com.bancolombia.usecase.registerbootcamp.RegisterBootcampUseCase;
 import co.com.bancolombia.usecase.listbootcamp.ListBootcampsUseCase;
 import co.com.bancolombia.usecase.deletebootcamp.DeleteBootcampUseCase;
+import co.com.bancolombia.usecase.validatebootcamps.ValidateBootcampsUseCase;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -29,6 +32,7 @@ public class BootcampHandler {
     private final RegisterBootcampUseCase registerBootcampUseCase;
     private final ListBootcampsUseCase listBootcampsUseCase;
     private final DeleteBootcampUseCase deleteBootcampUseCase;
+    private final ValidateBootcampsUseCase validateBootcampsUseCase;
     private final BootcampMapper bootcampMapper;
     private final BootcampListMapper bootcampListMapper;
 
@@ -58,6 +62,20 @@ public class BootcampHandler {
                 .flatMap(response -> ServerResponse.ok().bodyValue(response))
                 .doOnSuccess(v -> log.info("Bootcamp {} deleted successfully", bootcampId))
                 .doOnError(error -> log.error("Error deleting bootcamp", error)));
+    }
+
+    public Mono<ServerResponse> validateBootcamps(ServerRequest request) {
+        return request.bodyToMono(ValidateBootcampsRequest.class)
+            .flatMap(validateRequest -> validateBootcampsUseCase.execute(validateRequest.getIds()))
+            .map(result -> ValidateBootcampsResponse.builder()
+                .allExist(result.isAllExist())
+                .existingIds(result.getExistingIds())
+                .notFoundIds(result.getNotFoundIds())
+                .hasDateConflicts(result.isHasDateConflicts())
+                .build())
+            .flatMap(response -> ServerResponse.ok().bodyValue(response))
+            .doOnSuccess(v -> log.info("Bootcamps validated successfully"))
+            .doOnError(error -> log.error("Error validating bootcamps", error));
     }
 
     private BootcampDeleteResponse buildDeleteResponse(DeleteBootcampSaga saga) {
