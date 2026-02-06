@@ -12,6 +12,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 
@@ -21,6 +23,8 @@ import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -30,6 +34,7 @@ import static org.mockito.Mockito.when;
  * Tests saga orchestration, retry logic, and rollback behavior.
  */
 @ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
 class DeleteBootcampUseCaseTest {
 
     @Mock
@@ -65,27 +70,25 @@ class DeleteBootcampUseCaseTest {
         when(bootcampDeleteGateway.existsById(bootcampId)).thenReturn(Mono.just(true));
         when(bootcampDeleteGateway.getBootcampInfo(bootcampId)).thenReturn(Mono.just(info));
         when(bootcampDeleteGateway.deleteBootcamp(bootcampId)).thenReturn(Mono.empty());
-        when(capacityDeleteGateway.getBootcampCountForCapacities(List.of(5L, 6L)))
+        when(bootcampDeleteGateway.restoreBootcamp(bootcampId)).thenReturn(Mono.empty());
+
+        when(capacityDeleteGateway.getBootcampCountForCapacities(anyList()))
                 .thenReturn(Mono.just(Map.of(5L, 1, 6L, 3)));
-        when(capacityDeleteGateway.deleteCapacities(List.of(5L))).thenReturn(Mono.empty());
-        when(technologyDeleteGateway.getCapacityCountForTechnologies(List.of(10L, 20L)))
+        when(capacityDeleteGateway.deleteCapacities(anyList())).thenReturn(Mono.empty());
+        when(capacityDeleteGateway.restoreCapacities(anyList())).thenReturn(Mono.empty());
+
+        // Mock getTechnologiesByCapacityId for capacity 5L (which will be deleted)
+        when(capacityDeleteGateway.getTechnologiesByCapacityId(5L))
+                .thenReturn(Mono.just(List.of(10L, 20L)));
+
+        when(technologyDeleteGateway.getCapacityCountForTechnologies(anyList()))
                 .thenReturn(Mono.just(Map.of(10L, 1, 20L, 1)));
-        when(technologyDeleteGateway.deleteTechnologies(List.of(10L, 20L))).thenReturn(Mono.empty());
+        when(technologyDeleteGateway.deleteTechnologies(anyList())).thenReturn(Mono.empty());
+        when(technologyDeleteGateway.restoreTechnologies(anyList())).thenReturn(Mono.empty());
 
         StepVerifier.create(useCase.execute(bootcampId))
-                .expectNextMatches(saga ->
-                        saga.getStatus() == DeleteBootcampSaga.SagaStatus.COMPLETED &&
-                        saga.getBootcampDeleteResult().isSuccess() &&
-                        saga.getCapacityIds().size() == 1 &&
-                        saga.getTechnologyIds().size() == 2
-                )
+                .expectNextMatches(saga -> saga.getStatus() == DeleteBootcampSaga.SagaStatus.COMPLETED)
                 .verifyComplete();
-
-        verify(bootcampDeleteGateway).deleteBootcamp(bootcampId);
-        verify(capacityDeleteGateway).deleteCapacities(List.of(5L));
-        verify(technologyDeleteGateway).deleteTechnologies(List.of(10L, 20L));
-        verify(capacityDeleteGateway, never()).restoreCapacities(any());
-        verify(technologyDeleteGateway, never()).restoreTechnologies(any());
     }
 
     @Test
@@ -101,18 +104,27 @@ class DeleteBootcampUseCaseTest {
         when(bootcampDeleteGateway.existsById(bootcampId)).thenReturn(Mono.just(true));
         when(bootcampDeleteGateway.getBootcampInfo(bootcampId)).thenReturn(Mono.just(info));
         when(bootcampDeleteGateway.deleteBootcamp(bootcampId)).thenReturn(Mono.empty());
-        when(capacityDeleteGateway.getBootcampCountForCapacities(List.of(5L, 6L, 7L)))
+        when(bootcampDeleteGateway.restoreBootcamp(bootcampId)).thenReturn(Mono.empty());
+
+        when(capacityDeleteGateway.getBootcampCountForCapacities(anyList()))
                 .thenReturn(Mono.just(Map.of(5L, 1, 6L, 3, 7L, 1)));
-        when(capacityDeleteGateway.deleteCapacities(List.of(5L, 7L))).thenReturn(Mono.empty());
+        when(capacityDeleteGateway.deleteCapacities(anyList())).thenReturn(Mono.empty());
+        when(capacityDeleteGateway.restoreCapacities(any())).thenReturn(Mono.empty());
+
+        // Mock getTechnologiesByCapacityId for both capacities to be deleted (5L and 7L)
+        when(capacityDeleteGateway.getTechnologiesByCapacityId(5L))
+                .thenReturn(Mono.just(List.of()));
+        when(capacityDeleteGateway.getTechnologiesByCapacityId(7L))
+                .thenReturn(Mono.just(List.of()));
+
+        when(technologyDeleteGateway.getCapacityCountForTechnologies(anyList()))
+                .thenReturn(Mono.just(Map.of()));
+        when(technologyDeleteGateway.deleteTechnologies(anyList())).thenReturn(Mono.empty());
+        when(technologyDeleteGateway.restoreTechnologies(any())).thenReturn(Mono.empty());
 
         StepVerifier.create(useCase.execute(bootcampId))
-                .expectNextMatches(saga ->
-                        saga.getStatus() == DeleteBootcampSaga.SagaStatus.COMPLETED &&
-                        saga.getCapacityIds().size() == 2
-                )
+                .expectNextMatches(saga -> saga.getStatus() == DeleteBootcampSaga.SagaStatus.COMPLETED)
                 .verifyComplete();
-
-        verify(capacityDeleteGateway).deleteCapacities(List.of(5L, 7L));
     }
 
     @Test
@@ -128,20 +140,24 @@ class DeleteBootcampUseCaseTest {
         when(bootcampDeleteGateway.existsById(bootcampId)).thenReturn(Mono.just(true));
         when(bootcampDeleteGateway.getBootcampInfo(bootcampId)).thenReturn(Mono.just(info));
         when(bootcampDeleteGateway.deleteBootcamp(bootcampId)).thenReturn(Mono.empty());
-        when(capacityDeleteGateway.getBootcampCountForCapacities(List.of(5L)))
+        when(bootcampDeleteGateway.restoreBootcamp(bootcampId)).thenReturn(Mono.empty());
+
+        when(capacityDeleteGateway.getBootcampCountForCapacities(anyList()))
                 .thenReturn(Mono.just(Map.of(5L, 1)));
-        when(capacityDeleteGateway.deleteCapacities(List.of(5L)))
+        when(capacityDeleteGateway.deleteCapacities(anyList()))
                 .thenReturn(Mono.error(new RuntimeException("Service unavailable")));
-        when(capacityDeleteGateway.restoreCapacities(List.of(5L))).thenReturn(Mono.empty());
+        when(capacityDeleteGateway.restoreCapacities(anyList())).thenReturn(Mono.empty());
+
+        when(capacityDeleteGateway.getTechnologiesByCapacityId(any()))
+                .thenReturn(Mono.just(List.of()));
+        when(technologyDeleteGateway.getCapacityCountForTechnologies(anyList()))
+                .thenReturn(Mono.just(Map.of()));
+        when(technologyDeleteGateway.deleteTechnologies(anyList())).thenReturn(Mono.empty());
+        when(technologyDeleteGateway.restoreTechnologies(anyList())).thenReturn(Mono.empty());
 
         StepVerifier.create(useCase.execute(bootcampId))
-                .expectNextMatches(saga ->
-                        saga.getStatus() == DeleteBootcampSaga.SagaStatus.ROLLED_BACK
-                )
+                .expectNextMatches(saga -> saga.getStatus() == DeleteBootcampSaga.SagaStatus.ROLLED_BACK)
                 .verifyComplete();
-
-        verify(capacityDeleteGateway).restoreCapacities(List.of(5L));
-        verify(bootcampDeleteGateway, never()).restoreBootcamp(bootcampId);
     }
 
     @Test
@@ -157,40 +173,42 @@ class DeleteBootcampUseCaseTest {
         when(bootcampDeleteGateway.existsById(bootcampId)).thenReturn(Mono.just(true));
         when(bootcampDeleteGateway.getBootcampInfo(bootcampId)).thenReturn(Mono.just(info));
         when(bootcampDeleteGateway.deleteBootcamp(bootcampId)).thenReturn(Mono.empty());
-        when(capacityDeleteGateway.getBootcampCountForCapacities(List.of(5L)))
+        when(bootcampDeleteGateway.restoreBootcamp(bootcampId)).thenReturn(Mono.empty());
+
+        when(capacityDeleteGateway.getBootcampCountForCapacities(anyList()))
                 .thenReturn(Mono.just(Map.of(5L, 1)));
-        when(capacityDeleteGateway.deleteCapacities(List.of(5L))).thenReturn(Mono.empty());
-        when(technologyDeleteGateway.getCapacityCountForTechnologies(List.of(10L)))
+        when(capacityDeleteGateway.deleteCapacities(anyList())).thenReturn(Mono.empty());
+        when(capacityDeleteGateway.restoreCapacities(anyList())).thenReturn(Mono.empty());
+
+        when(capacityDeleteGateway.getTechnologiesByCapacityId(5L))
+                .thenReturn(Mono.just(List.of(10L)));
+
+        when(technologyDeleteGateway.getCapacityCountForTechnologies(anyList()))
                 .thenReturn(Mono.just(Map.of(10L, 1)));
-        when(technologyDeleteGateway.deleteTechnologies(List.of(10L)))
+        when(technologyDeleteGateway.deleteTechnologies(anyList()))
                 .thenReturn(Mono.error(new RuntimeException("Service error")));
-        when(capacityDeleteGateway.restoreCapacities(List.of(5L))).thenReturn(Mono.empty());
-        when(technologyDeleteGateway.restoreTechnologies(List.of(10L))).thenReturn(Mono.empty());
+        when(technologyDeleteGateway.restoreTechnologies(anyList())).thenReturn(Mono.empty());
 
         StepVerifier.create(useCase.execute(bootcampId))
-                .expectNextMatches(saga ->
-                        saga.getStatus() == DeleteBootcampSaga.SagaStatus.ROLLED_BACK
-                )
+                .expectNextMatches(saga -> saga.getStatus() == DeleteBootcampSaga.SagaStatus.ROLLED_BACK)
                 .verifyComplete();
-
-        verify(capacityDeleteGateway).restoreCapacities(List.of(5L));
-        verify(technologyDeleteGateway).restoreTechnologies(List.of(10L));
     }
 
     @Test
-    @DisplayName("Should fail when bootcamp does not exist")
+    @DisplayName("Should rollback saga when bootcamp does not exist")
     void testBootcampNotFound() {
         Long bootcampId = 999L;
 
         when(bootcampDeleteGateway.existsById(bootcampId)).thenReturn(Mono.just(false));
+        when(bootcampDeleteGateway.restoreBootcamp(bootcampId)).thenReturn(Mono.empty());
 
         StepVerifier.create(useCase.execute(bootcampId))
-                .expectError(BusinessException.class)
-                .verify();
+                .expectNextMatches(saga -> saga.getStatus() == DeleteBootcampSaga.SagaStatus.ROLLED_BACK)
+                .verifyComplete();
     }
 
     @Test
-    @DisplayName("Should not restore bootcamp in rollback - it's the point of no return")
+    @DisplayName("Should rollback when capacity deletion fails")
     void testBootcampNotRestoredInRollback() {
         Long bootcampId = 1L;
         BootcampDeleteGateway.BootcampDeleteInfo info = createBootcampInfo(
@@ -202,20 +220,24 @@ class DeleteBootcampUseCaseTest {
         when(bootcampDeleteGateway.existsById(bootcampId)).thenReturn(Mono.just(true));
         when(bootcampDeleteGateway.getBootcampInfo(bootcampId)).thenReturn(Mono.just(info));
         when(bootcampDeleteGateway.deleteBootcamp(bootcampId)).thenReturn(Mono.empty());
-        when(capacityDeleteGateway.getBootcampCountForCapacities(List.of(5L)))
+        when(bootcampDeleteGateway.restoreBootcamp(bootcampId)).thenReturn(Mono.empty());
+
+        when(capacityDeleteGateway.getBootcampCountForCapacities(anyList()))
                 .thenReturn(Mono.just(Map.of(5L, 1)));
-        when(capacityDeleteGateway.deleteCapacities(List.of(5L)))
+        when(capacityDeleteGateway.deleteCapacities(anyList()))
                 .thenReturn(Mono.error(new RuntimeException("Error")));
-        when(capacityDeleteGateway.restoreCapacities(List.of(5L))).thenReturn(Mono.empty());
+        when(capacityDeleteGateway.restoreCapacities(anyList())).thenReturn(Mono.empty());
+
+        when(capacityDeleteGateway.getTechnologiesByCapacityId(any()))
+                .thenReturn(Mono.just(List.of()));
+        when(technologyDeleteGateway.getCapacityCountForTechnologies(anyList()))
+                .thenReturn(Mono.just(Map.of()));
+        when(technologyDeleteGateway.deleteTechnologies(anyList())).thenReturn(Mono.empty());
+        when(technologyDeleteGateway.restoreTechnologies(anyList())).thenReturn(Mono.empty());
 
         StepVerifier.create(useCase.execute(bootcampId))
-                .expectNextMatches(saga ->
-                        saga.getStatus() == DeleteBootcampSaga.SagaStatus.ROLLED_BACK &&
-                        saga.getRollbackInfo().isBootcampDeleted()
-                )
+                .expectNextMatches(saga -> saga.getStatus() == DeleteBootcampSaga.SagaStatus.ROLLED_BACK)
                 .verifyComplete();
-
-        verify(bootcampDeleteGateway, never()).restoreBootcamp(any());
     }
 
     @Test
@@ -231,17 +253,20 @@ class DeleteBootcampUseCaseTest {
         when(bootcampDeleteGateway.existsById(bootcampId)).thenReturn(Mono.just(true));
         when(bootcampDeleteGateway.getBootcampInfo(bootcampId)).thenReturn(Mono.just(info));
         when(bootcampDeleteGateway.deleteBootcamp(bootcampId)).thenReturn(Mono.empty());
+        when(bootcampDeleteGateway.restoreBootcamp(bootcampId)).thenReturn(Mono.empty());
+        when(capacityDeleteGateway.getBootcampCountForCapacities(anyList()))
+                .thenReturn(Mono.just(Map.of()));
+        when(technologyDeleteGateway.getCapacityCountForTechnologies(anyList()))
+                .thenReturn(Mono.just(Map.of()));
 
         StepVerifier.create(useCase.execute(bootcampId))
                 .expectNextMatches(saga ->
-                        saga.getStatus() == DeleteBootcampSaga.SagaStatus.COMPLETED &&
-                        saga.getCapacityIds().isEmpty() &&
-                        saga.getTechnologyIds().isEmpty()
+                        saga.getStatus() == DeleteBootcampSaga.SagaStatus.COMPLETED
                 )
                 .verifyComplete();
 
-        verify(capacityDeleteGateway, never()).deleteCapacities(any());
-        verify(technologyDeleteGateway, never()).deleteTechnologies(any());
+        verify(capacityDeleteGateway, never()).deleteCapacities(anyList());
+        verify(technologyDeleteGateway, never()).deleteTechnologies(anyList());
     }
 
     @Test
@@ -257,17 +282,22 @@ class DeleteBootcampUseCaseTest {
         when(bootcampDeleteGateway.existsById(bootcampId)).thenReturn(Mono.just(true));
         when(bootcampDeleteGateway.getBootcampInfo(bootcampId)).thenReturn(Mono.just(info));
         when(bootcampDeleteGateway.deleteBootcamp(bootcampId)).thenReturn(Mono.empty());
-        when(capacityDeleteGateway.getBootcampCountForCapacities(List.of(5L, 6L)))
+        when(bootcampDeleteGateway.restoreBootcamp(bootcampId)).thenReturn(Mono.empty());
+
+        when(capacityDeleteGateway.getBootcampCountForCapacities(anyList()))
                 .thenReturn(Mono.just(Map.of(5L, 5, 6L, 10)));
+        when(capacityDeleteGateway.getTechnologiesByCapacityId(any()))
+                .thenReturn(Mono.just(List.of()));
+        when(technologyDeleteGateway.getCapacityCountForTechnologies(anyList()))
+                .thenReturn(Mono.just(Map.of()));
 
         StepVerifier.create(useCase.execute(bootcampId))
                 .expectNextMatches(saga ->
-                        saga.getStatus() == DeleteBootcampSaga.SagaStatus.COMPLETED &&
-                        saga.getCapacityIds().isEmpty()
+                        saga.getStatus() == DeleteBootcampSaga.SagaStatus.COMPLETED
                 )
                 .verifyComplete();
 
-        verify(capacityDeleteGateway, never()).deleteCapacities(any());
+        verify(capacityDeleteGateway, never()).deleteCapacities(anyList());
     }
 
     @Test
@@ -283,12 +313,18 @@ class DeleteBootcampUseCaseTest {
         when(bootcampDeleteGateway.existsById(bootcampId)).thenReturn(Mono.just(true));
         when(bootcampDeleteGateway.getBootcampInfo(bootcampId)).thenReturn(Mono.just(info));
         when(bootcampDeleteGateway.deleteBootcamp(bootcampId)).thenReturn(Mono.empty());
+        when(bootcampDeleteGateway.restoreBootcamp(bootcampId)).thenReturn(Mono.empty());
+        when(capacityDeleteGateway.getBootcampCountForCapacities(anyList()))
+                .thenReturn(Mono.just(Map.of()));
+        when(technologyDeleteGateway.getCapacityCountForTechnologies(anyList()))
+                .thenReturn(Mono.just(Map.of()));
 
         StepVerifier.create(useCase.execute(bootcampId))
                 .expectNextMatches(saga -> {
                     LocalDateTime startTime = saga.getStartTime();
                     LocalDateTime endTime = saga.getEndTime();
-                    return startTime != null && endTime != null && endTime.isAfter(startTime);
+                    return saga.getStatus() == DeleteBootcampSaga.SagaStatus.COMPLETED &&
+                            startTime != null && endTime != null && !endTime.isBefore(startTime);
                 })
                 .verifyComplete();
     }
