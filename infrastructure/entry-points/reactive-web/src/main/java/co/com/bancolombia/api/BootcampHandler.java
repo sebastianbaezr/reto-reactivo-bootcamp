@@ -29,6 +29,7 @@ import reactor.core.publisher.Mono;
 public class BootcampHandler {
 
     private static final String BOOTCAMP_ID_PATH_VARIABLE = "bootcampId";
+    // Used for deleteBootcamp method
 
     private final RegisterBootcampUseCase registerBootcampUseCase;
     private final ListBootcampsUseCase listBootcampsUseCase;
@@ -80,12 +81,11 @@ public class BootcampHandler {
             .doOnError(error -> log.error("Error validating bootcamps", error));
     }
 
-    public Mono<ServerResponse> getBootcampDetail(ServerRequest request) {
-        return Mono.fromCallable(() -> Long.parseLong(request.pathVariable(BOOTCAMP_ID_PATH_VARIABLE)))
-            .flatMap(getBootcampDetailUseCase::execute)
+    public Mono<ServerResponse> getBootcampWithMostPeople(ServerRequest request) {
+        return getBootcampDetailUseCase.execute()
             .flatMap(response -> ServerResponse.ok().bodyValue(response))
-            .doOnSuccess(v -> log.info("Bootcamp detail retrieved successfully"))
-            .doOnError(error -> log.error("Error retrieving bootcamp detail", error));
+            .doOnSuccess(v -> log.info("Bootcamp with most people retrieved successfully"))
+            .doOnError(error -> log.error("Error retrieving bootcamp with most people", error));
     }
 
     private BootcampDeleteResponse buildDeleteResponse(DeleteBootcampSaga saga) {

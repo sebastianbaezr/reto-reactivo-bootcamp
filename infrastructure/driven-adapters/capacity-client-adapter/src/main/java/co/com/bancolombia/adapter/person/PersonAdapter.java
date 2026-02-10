@@ -2,6 +2,7 @@ package co.com.bancolombia.adapter.person;
 
 import co.com.bancolombia.model.enums.DomainErrorCode;
 import co.com.bancolombia.model.exception.BusinessException;
+import co.com.bancolombia.model.person.BootcampEnrollment;
 import co.com.bancolombia.model.person.Person;
 import co.com.bancolombia.model.person.gateways.PersonGateway;
 import co.com.bancolombia.webclient.config.WebClientFactory;
@@ -19,6 +20,7 @@ public class PersonAdapter implements PersonGateway {
 
     private static final String SERVICE_NAME = "person-service";
     private static final String GET_PERSONS_PATH = "/api/bootcamps/{bootcampId}/persons";
+    private static final String GET_BOOTCAMP_WITH_MOST_PEOPLE_PATH = "/api/persons/bootcamp-with-most-people";
     private static final int TIMEOUT_SECONDS = 5;
 
     private final WebClient webClient;
@@ -53,5 +55,30 @@ public class PersonAdapter implements PersonGateway {
                 log.error("Person fetch failed, returning empty", error);
                 return Mono.error(new BusinessException(DomainErrorCode.PERSON_SERVICE_UNAVAILABLE));
             });
+    }
+
+    @Override
+    public Mono<BootcampEnrollment> getBootcampWithMostPeople() {
+        log.info("Fetching bootcamp with most people");
+
+        return webClient
+            .get()
+            .uri(GET_BOOTCAMP_WITH_MOST_PEOPLE_PATH)
+            .retrieve()
+            .onStatus(status -> status.is4xxClientError() || status.is5xxServerError(), response -> {
+                log.error("Error fetching bootcamp with most people. Status: {}", response.statusCode());
+                return response.bodyToMono(String.class)
+                    .doOnNext(body -> log.error("Error response body: {}", body))
+                    .then(Mono.error(new BusinessException(
+                        response.statusCode().is5xxServerError()
+                            ? DomainErrorCode.PERSON_SERVICE_UNAVAILABLE
+                            : DomainErrorCode.PERSON_SERVICE_ERROR
+                    )));
+            })
+            .bodyToMono(BootcampEnrollment.class)
+            .timeout(Duration.ofSeconds(TIMEOUT_SECONDS))
+            .doOnSuccess(enrollment -> log.info("Bootcamp with most people: ID={}, Count={}", enrollment.bootcampId(), enrollment.personCount()))
+            .doOnError(error -> log.error("Error fetching bootcamp with most people: {}", error.getMessage(), error))
+            .onErrorResume(error -> Mono.error(new BusinessException(DomainErrorCode.PERSON_SERVICE_UNAVAILABLE)));
     }
 }

@@ -9,6 +9,7 @@ import co.com.bancolombia.model.common.Page;
 import co.com.bancolombia.model.common.PageRequest;
 import co.com.bancolombia.model.common.SortDirection;
 import co.com.bancolombia.r2dbc.helper.ReactiveAdapterOperations;
+import co.com.bancolombia.r2dbc.mapper.BootcampDataMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.reactivecommons.utils.ObjectMapper;
 import org.springframework.stereotype.Repository;
@@ -17,7 +18,6 @@ import reactor.core.publisher.Mono;
 
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 @Slf4j
 @Repository
@@ -26,15 +26,18 @@ public class BootcampRepositoryAdapter extends ReactiveAdapterOperations<Bootcam
 
     private final BootcampCapacityR2dbcRepository bootcampCapacityRepository;
     private final CapacityDetailGateway capacityDetailGateway;
+    private final BootcampDataMapper bootcampDataMapper;
 
     public BootcampRepositoryAdapter(
             BootcampR2dbcRepository repository,
             BootcampCapacityR2dbcRepository bootcampCapacityRepository,
             CapacityDetailGateway capacityDetailGateway,
-            ObjectMapper mapper) {
+            ObjectMapper mapper,
+            BootcampDataMapper bootcampDataMapper) {
         super(repository, mapper, d -> mapper.map(d, Bootcamp.class));
         this.bootcampCapacityRepository = bootcampCapacityRepository;
         this.capacityDetailGateway = capacityDetailGateway;
+        this.bootcampDataMapper = bootcampDataMapper;
     }
 
     @Override
@@ -43,22 +46,23 @@ public class BootcampRepositoryAdapter extends ReactiveAdapterOperations<Bootcam
 
         List<Long> capacityIds = bootcamp.getCapacities().stream()
             .map(Capacity::getId)
-            .collect(Collectors.toList());
+            .toList();
 
-        BootcampData bootcampData = toData(bootcamp);
+        BootcampData bootcampData = bootcampDataMapper.toData(bootcamp);
         bootcampData.setCapacityIds(capacityIds);
 
         return repository.save(bootcampData)
             .flatMap(savedBootcamp ->
                 saveBootcampCapacities(savedBootcamp.getId(), capacityIds)
-                    .thenReturn(savedBootcamp)
+                    .thenReturn(buildBootcampDomain(savedBootcamp, bootcamp.getCapacities()))
             )
-            .map(this::toEntity)
-            .map(entity -> {
-                entity.setCapacities(bootcamp.getCapacities());
-                return entity;
-            })
             .doOnSuccess(b -> log.info("Bootcamp saved successfully: {}", b.getId()));
+    }
+
+    private Bootcamp buildBootcampDomain(BootcampData bootcampData, List<Capacity> capacities) {
+        Bootcamp bootcamp = bootcampDataMapper.toDomain(bootcampData);
+        bootcamp.setCapacities(capacities);
+        return bootcamp;
     }
 
     @Override
@@ -77,7 +81,7 @@ public class BootcampRepositoryAdapter extends ReactiveAdapterOperations<Bootcam
                     });
             })
             .map(bootcampData -> {
-                Bootcamp bootcamp = toEntity(bootcampData);
+                Bootcamp bootcamp = bootcampDataMapper.toDomain(bootcampData);
                 List<Capacity> capacities = bootcampData.getCapacityIds().stream()
                     .map(capId -> Capacity.builder().id(capId).build())
                     .toList();
@@ -100,7 +104,7 @@ public class BootcampRepositoryAdapter extends ReactiveAdapterOperations<Bootcam
                         return bootcampData;
                     })
             )
-            .map(this::toEntity);
+            .map(bootcampDataMapper::toDomain);
     }
 
     @Override
@@ -190,7 +194,7 @@ public class BootcampRepositoryAdapter extends ReactiveAdapterOperations<Bootcam
                     .toList();
 
                 bootcampData.setCapacityIds(capacityIds);
-                Bootcamp bootcamp = toEntity(bootcampData);
+                Bootcamp bootcamp = bootcampDataMapper.toDomain(bootcampData);
 
                 List<Capacity> capacities = capacityIds.stream()
                     .map(id -> {
@@ -278,13 +282,13 @@ public class BootcampRepositoryAdapter extends ReactiveAdapterOperations<Bootcam
                         return bootcampData;
                     })
             )
-            .map(this::toEntity);
+            .map(bootcampDataMapper::toDomain);
     }
 
     /**
      * Guarda las relaciones bootcamp-capacidades
      */
-    private Mono<Void> saveBootcampCapacities(Long bootcampId, List<Long> capacityIds) {
+    private Mono<Void>  saveBootcampCapacities(Long bootcampId, List<Long> capacityIds) {
         return Flux.fromIterable(capacityIds)
             .map(capacityId -> BootcampCapacityData.builder()
                 .bootcampId(bootcampId)

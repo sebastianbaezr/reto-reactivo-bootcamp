@@ -1,5 +1,6 @@
 package co.com.bancolombia.usecase.getbootcampdetail;
 
+import co.com.bancolombia.model.bootcamp.Bootcamp;
 import co.com.bancolombia.model.bootcamp.BootcampDetail;
 import co.com.bancolombia.model.bootcamp.gateways.BootcampRepository;
 import co.com.bancolombia.model.capacity.Capacity;
@@ -19,32 +20,39 @@ public class GetBootcampDetailUseCase {
     private final PersonGateway personGateway;
     private final CapacityDetailGateway capacityDetailGateway;
 
-    public Mono<BootcampDetail> execute(Long bootcampId) {
-        return bootcampRepository.findById(bootcampId)
-            .switchIfEmpty(Mono.error(new BusinessException(DomainErrorCode.BOOTCAMP_NOT_FOUND)))
-            .flatMap(bootcamp -> {
-                List<Long> capacityIds = bootcamp.getCapacities().stream()
-                    .map(Capacity::getId)
-                    .toList();
-
-                System.out.println("Capacity IDs for bootcamp " + bootcampId + ": " + capacityIds);
-
-                Mono<List<CapacityDetail>> capacitiesMono = capacityIds.isEmpty()
-                    ? Mono.just(List.of())
-                    : capacityDetailGateway.getCapacitiesByIds(capacityIds).collectList();
-
-                return Mono.zip(
-                    personGateway.getPersonsByBootcampId(bootcampId).collectList(),
-                    capacitiesMono
-                ).map(tuple -> BootcampDetail.builder()
-                    .id(bootcamp.getId())
-                    .name(bootcamp.getName())
-                    .description(bootcamp.getDescription())
-                    .releaseDate(bootcamp.getReleaseDate())
-                    .duration(bootcamp.getDuration())
-                    .persons(tuple.getT1())
-                    .capacities(tuple.getT2())
-                    .build());
-            });
+    public Mono<BootcampDetail> execute() {
+        return personGateway.getBootcampWithMostPeople()
+            .flatMap(enrollment -> bootcampRepository.findById(enrollment.bootcampId())
+                .switchIfEmpty(Mono.error(new BusinessException(DomainErrorCode.BOOTCAMP_NOT_FOUND)))
+            )
+            .flatMap(this::buildBootcampDetail);
     }
+
+    private Mono<BootcampDetail> buildBootcampDetail(Bootcamp bootcamp) {
+        List<Long> capacityIds = bootcamp.getCapacities() != null
+            ? bootcamp.getCapacities().stream()
+                .map(Capacity::getId)
+                .toList()
+            : List.of();
+
+        System.out.println("Capacity IDs for bootcamp " + bootcamp.getId() + ": " + capacityIds);
+
+        Mono<List<CapacityDetail>> capacitiesMono = capacityIds.isEmpty()
+            ? Mono.just(List.of())
+            : capacityDetailGateway.getCapacitiesByIds(capacityIds).collectList();
+
+        return Mono.zip(
+            personGateway.getPersonsByBootcampId(bootcamp.getId()).collectList(),
+            capacitiesMono
+        ).map(tuple -> BootcampDetail.builder()
+            .id(bootcamp.getId())
+            .name(bootcamp.getName())
+            .description(bootcamp.getDescription())
+            .releaseDate(bootcamp.getReleaseDate())
+            .duration(bootcamp.getDuration())
+            .persons(tuple.getT1())
+            .capacities(tuple.getT2())
+            .build());
+    }
+
 }
